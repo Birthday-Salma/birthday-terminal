@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVU_SECURE_TERMINAL_V2.026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold:     #ffd700;
+            --cyber:    #00f2ff;
+            --error:    #ff3e3e;
+            --bg:       #01040a;
+            --card-bg:  rgba(6, 11, 25, 0.96);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            overflow: hidden;
+            font-family: 'Space Mono', monospace;
+            height: 100vh;
+            color: #fff;
+        }
+
+        canvas { position: fixed; top: 0; left: 0; pointer-events: none; }
+        #bgCanvas { z-index: 1; }
+        #dustCanvas { z-index: 5; }
+        #confCanvas { z-index: 20; }
+
+        #scene {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 2000px;
+        }
+
+        /* ── The Secure Card ── */
+        .card-3d {
+            position: relative;
+            width: 460px;
+            background: var(--card-bg);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            border-radius: 20px;
+            padding: 50px 40px;
+            transform-style: preserve-3d;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            transition: transform 0.1s ease-out, border-color 0.4s;
+        }
+
+        .card-3d.locked { border-color: var(--error); }
+        .card-3d.unlocked { border-color: var(--gold); box-shadow: 0 0 60px rgba(255, 215, 0, 0.15); }
+
+        .moon {
+            position: absolute;
+            top: -40px; right: 10px;
+            font-size: 60px;
+            filter: grayscale(1) opacity(0.3);
+            transform: translateZ(60px);
+            transition: 1.5s ease;
+        }
+        .unlocked .moon { filter: grayscale(0) drop-shadow(0 0 20px var(--gold)); opacity: 1; }
+
+        .system-text {
+            color: var(--cyber);
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            min-height: 120px;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(0, 242, 255, 0.05);
+            border: 1px solid var(--cyber);
+            color: var(--cyber);
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        /* Scanline Overlay */
+        .lock-screen {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            border-radius: inherit;
+            z-index: 5;
+        }
+
+        .info-grid { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.8rem; }
+        .label { color: #506a85; }
+        .val { color: var(--cyber); font-weight: 700; }
+
+        .timer-box {
+            background: #000;
+            border: 1px solid #1a2635;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.05);
+        }
+        #timer { font-size: 1.4rem; color: var(--cyber); text-shadow: 0 0 10px var(--cyber); font-weight: bold; }
+
+        .btn-access {
+            width: 100%;
+            margin-top: 25px;
+            padding: 20px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            color: #444;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            cursor: not-allowed;
+            transition: all 0.4s;
+        }
+        .btn-access.ready {
+            background: linear-gradient(90deg, #00f2ff, #0066ff);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
+        }
+        .btn-access.ready:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(0, 242, 255, 0.4); }
+
+        /* Final Reveal Overlay */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 40px;
+            text-align: center;
+        }
+        .overlay.show { opacity: 1; pointer-events: auto; }
+        .overlay h2 { color: var(--gold); font-size: 2rem; margin-bottom: 20px; font-family: 'Syne', sans-serif; }
+        .overlay p { color: #fff; line-height: 1.8; font-size: 0.95rem; }
+
+        .btn-relock {
+            margin-top: 40px;
+            background: none;
+            border: 1px solid #333;
+            color: #555;
+            cursor: pointer;
+            padding: 8px 20px;
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        .btn-relock:hover { color: var(--cyber); border-color: var(--cyber); }
+    </style>
+</head>
+<body>
+
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="dustCanvas"></canvas>
+    <canvas id="confCanvas"></canvas>
+
+    <div id="scene">
+        <div class="card-3d locked" id="card">
+            <div class="lock-screen"></div>
+            <div class="moon" id="moon">🌙</div>
+
+            <div class="system-text">
+                <span>SEC_STATUS: <span id="statusText">ENCRYPTED</span></span>
+                <span id="errorCode" style="color: var(--error);"></span>
+            </div>
+
+            <h2 id="headline">DATA_LOCKED</h2>
+            <div class="badge" id="subtext">AWAITING_KEY_INJECTION</div>
+
+            <div class="info-grid">
+                <div class="info-row"><span class="label">IDENT_TYPE:</span><span class="val">SVU_CYBER_UNIT</span></div>
+                <div class="info-row"><span class="label">LOC_ORIGIN:</span><span class="val">RIYADH_KSA</span></div>
+                
+                <div class="timer-box">
+                    <div style="font-size: 0.6rem; color: #506a85; margin-bottom: 5px; letter-spacing: 2px;">DECRYPTION_ETA (GMT+3)</div>
+                    <div id="timer">00:00:00:00</div>
+                </div>
+            </div>
+
+            <button class="btn-access" id="accessBtn" onclick="grantAccess()">Access Denied</button>
+
+            <div class="overlay" id="overlay">
+                <div style="font-size: 60px; margin-bottom: 20px;">🔓</div>
+                <h2>SYSTEM UNLOCKED</h2>
+                <p>To our Senior Cyber Engineer:<br><br>Wishing you an elite birthday and a blessed Ramadan in Riyadh. Your code is clean, and your security is unbreakable! ✨</p>
+                <button class="btn-relock" onclick="closeOverlay()">TERMINATE_SESSION</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- TARGET CONFIGURATION ---
+    const targetDate = new Date().getTime() + (0.2 * 60 * 1000);
+    //const targetDate = new Date("2026-02-27T23:59:59+03:00").getTime();
+    let isUnlocked = false;
+
+    // --- TEXT SCRAMBLE ENGINE ---
+    const chars = "!<>-_\\/[]{}—=+*^?#________";
+    function scramble(element, finalTag) {
+        let iterations = 0;
+        const interval = setInterval(() => {
+            element.innerText = finalTag.split("")
+                .map((char, index) => {
+                    if (index < iterations) return finalTag[index];
+                    return chars[Math.floor(Math.random() * chars.length)];
+                }).join("");
+            if (iterations >= finalTag.length) clearInterval(interval);
+            iterations += 1 / 3;
+        }, 30);
+    }
+
+    // --- SYSTEM MONITOR ---
+    function updateSystem() {
+        const now = new Date().getTime();
+        const diff = targetDate - now;
+
+        const timerEl = document.getElementById('timer');
+        const btn = document.getElementById('accessBtn');
+        const card = document.getElementById('card');
+        const status = document.getElementById('statusText');
+        const head = document.getElementById('headline');
+
+        if (diff <= 0) {
+            if (!isUnlocked) {
+                isUnlocked = true;
+                status.innerText = "AUTHENTICATED";
+                status.style.color = "var(--gold)";
+                card.classList.remove('locked');
+                card.classList.add('unlocked');
+                scramble(head, "Happy\nBirthday,\nBestie!");
+                scramble(document.getElementById('subtext'), "SENIOR CYBER SECURITY @ SVU");
+                btn.innerText = "Grant Access";
+                btn.classList.add('ready');
+            }
+            timerEl.innerText = "00:00:00:00";
+            return;
+        }
+
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        timerEl.innerText = `${d}:${h}:${m}:${s}`;
+
+        if (!isUnlocked && Math.random() > 0.98) {
+            const original = head.innerText;
+            head.innerText = "ACCESS_DENIED_" + Math.random().toString(16).substr(2, 4).toUpperCase();
+            setTimeout(() => { if(!isUnlocked) head.innerText = "DATA_LOCKED"; }, 150);
+        }
+    }
+
+    // --- ACCESS HANDLER ---
+    function grantAccess() {
+        if (!isUnlocked) {
+            const card = document.getElementById('card');
+            card.style.transform = "translateX(8px)";
+            setTimeout(() => card.style.transform = "translateX(-8px)", 50);
+            setTimeout(() => card.style.transform = "translateX(0)", 100);
+            document.getElementById('errorCode').innerText = "SEC_BREACH_ERR";
+            setTimeout(() => document.getElementById('errorCode').innerText = "", 1500);
+            return;
+        }
+        document.getElementById('overlay').classList.add('show');
+        triggerConfetti();
+    }
+
+    // --- PHYSICS ENGINE (Stars/Dust/Slow Confetti) ---
+    const bgC = document.getElementById('bgCanvas'), dustC = document.getElementById('dustCanvas'), confC = document.getElementById('confCanvas');
+    const ctxB = bgC.getContext('2d'), ctxD = dustC.getContext('2d'), ctxC = confC.getContext('2d');
+    let W, H, stars = [], dust = [], confetti = [];
+
+    class Particle {
+        constructor(x, y, color, isConfetti = false) {
+            this.x = x; this.y = y; this.color = color; this.isConfetti = isConfetti;
+            this.size = isConfetti ? Math.random() * 8 + 6 : 1.5;
+            this.vx = (Math.random() - 0.5) * (isConfetti ? 3 : 2);
+            this.vy = isConfetti ? Math.random() * 1.5 + 1 : (Math.random() - 0.5) * 2;
+            this.life = 1;
+            this.gravity = isConfetti ? 0.02 : 0; // Very low gravity for slow float
+            this.rotation = Math.random() * 360;
+            this.rSpeed = (Math.random() - 0.5) * 2;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy; this.vy += this.gravity;
+            if (this.isConfetti) { this.rotation += this.rSpeed; } else { this.life -= 0.02; }
+        }
+        draw(ctx) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.globalAlpha = this.life;
+            ctx.fillStyle = this.color;
+            if (this.isConfetti) {
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+            } else {
+                ctx.beginPath(); ctx.arc(0, 0, this.size, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+        }
+    }
+
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        bgC.width = dustC.width = confC.width = W;
+        bgC.height = dustC.height = confC.height = H;
+        stars = [];
+        for(let i=0; i<200; i++) {
+            let sz = Math.random() > 0.9 ? 2.5 : 0.8;
+            stars.push({x: Math.random()*W, y: Math.random()*H, sz, spd: sz*0.1});
+        }
+    }
+
+    function triggerConfetti() {
+        confetti = [];
+        for(let i=0; i<150; i++) {
+            setTimeout(() => {
+                const colors = ['#00f2ff', '#ffd700', '#ffffff', '#0066ff', '#ff00ff'];
+                confetti.push(new Particle(Math.random()*W, -20, colors[Math.floor(Math.random()*colors.length)], true));
+            }, i * 20); // Staggered entry
+        }
+    }
+
+    function animate() {
+        ctxB.clearRect(0,0,W,H); ctxD.clearRect(0,0,W,H); ctxC.clearRect(0,0,W,H);
+        stars.forEach(s => {
+            s.y -= s.spd; if(s.y < 0) s.y = H;
+            ctxB.fillStyle = "#fff"; ctxB.globalAlpha = 0.3 + Math.random()*0.7;
+            ctxB.beginPath(); ctxB.arc(s.x, s.y, s.sz, 0, Math.PI*2); ctxB.fill();
+        });
+        dust.forEach((p, i) => { p.update(); p.draw(ctxD); if(p.life <= 0) dust.splice(i, 1); });
+        confetti.forEach((p, i) => { p.update(); p.draw(ctxC); if(p.y > H + 20) confetti.splice(i, 1); });
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('mousemove', e => {
+        const card = document.getElementById('card');
+        let ax = (W/2 - e.pageX)/35; let ay = (H/2 - e.pageY)/35;
+        card.style.transform = `rotateY(${-ax}deg) rotateX(${ay}deg)`;
+        for(let i=0; i<1; i++) dust.push(new Particle(e.clientX, e.clientY, i%2?'#00f2ff':'#ffd700'));
+    });
+
+    function closeOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+    window.addEventListener('resize', resize);
+    resize(); animate();
+    setInterval(updateSystem, 1000);
+</script>
+</body>
+</html>
