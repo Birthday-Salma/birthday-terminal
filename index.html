@@ -3,31 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVU_SECURE_TERMINAL_V2.026</title>
+    <title>SVU_CORE_DASHBOARD</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --gold:     #ffd700;
-            --cyber:    #00f2ff;
-            --error:    #ff3e3e;
-            --bg:       #01040a;
-            --card-bg:  rgba(6, 11, 25, 0.96);
+            --matrix: #00ff41;
+            --bg: #000;
+            --white: #ffffff;
+            --gray: #888;
+            --gold: #ffd700;
+            --heart-red: #ff0033;
+            /* Semi-dark red for floating particles */
+            --float-heart: rgba(255, 0, 51, 0.25); 
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background: var(--bg);
             overflow: hidden;
             font-family: 'Space Mono', monospace;
             height: 100vh;
-            color: #fff;
+            color: var(--white);
+            transition: background 2s ease;
         }
 
-        canvas { position: fixed; top: 0; left: 0; pointer-events: none; }
-        #bgCanvas { z-index: 1; }
-        #dustCanvas { z-index: 5; }
-        #confCanvas { z-index: 20; }
+        body.heart-active {
+            background: #0a0000;
+        }
+
+        canvas { position: fixed; top: 0; left: 0; }
+        #matrixCanvas { z-index: 1; }
+        #confCanvas { z-index: 100; pointer-events: none; }
 
         #scene {
             position: relative;
@@ -39,118 +46,71 @@
             perspective: 2000px;
         }
 
-        /* ── The Secure Card ── */
-        .card-3d {
-            position: relative;
-            width: 460px;
-            background: var(--card-bg);
-            border: 1px solid rgba(0, 242, 255, 0.2);
-            border-radius: 20px;
-            padding: 50px 40px;
-            transform-style: preserve-3d;
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(20px);
-            transition: transform 0.1s ease-out, border-color 0.4s;
+        /* --- CARD PULSE --- */
+        @keyframes cardHeartbeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.03); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.015); }
+            100% { transform: scale(1); }
         }
 
-        .card-3d.locked { border-color: var(--error); }
-        .card-3d.unlocked { border-color: var(--gold); box-shadow: 0 0 60px rgba(255, 215, 0, 0.15); }
-
-        .moon {
-            position: absolute;
-            top: -40px; right: 10px;
-            font-size: 60px;
-            filter: grayscale(1) opacity(0.3);
-            transform: translateZ(60px);
-            transition: 1.5s ease;
-        }
-        .unlocked .moon { filter: grayscale(0) drop-shadow(0 0 20px var(--gold)); opacity: 1; }
-
-        .system-text {
-            color: var(--cyber);
-            font-size: 0.65rem;
-            letter-spacing: 3px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        h1 {
-            font-family: 'Syne', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 10px;
-            min-height: 120px;
-            text-transform: uppercase;
-        }
-
-        .badge {
-            display: inline-block;
-            background: rgba(0, 242, 255, 0.05);
-            border: 1px solid var(--cyber);
-            color: var(--cyber);
-            padding: 6px 14px;
-            border-radius: 4px;
-            font-size: 0.65rem;
-            font-weight: 700;
-            margin-bottom: 30px;
-        }
-
-        /* Scanline Overlay */
-        .lock-screen {
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
-            pointer-events: none;
-            border-radius: inherit;
-            z-index: 5;
-        }
-
-        .info-grid { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; }
-        .info-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.8rem; }
-        .label { color: #506a85; }
-        .val { color: var(--cyber); font-weight: 700; }
-
-        .timer-box {
-            background: #000;
-            border: 1px solid #1a2635;
-            padding: 15px;
-            margin-top: 20px;
-            text-align: center;
-            border-radius: 8px;
-            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.05);
-        }
-        #timer { font-size: 1.4rem; color: var(--cyber); text-shadow: 0 0 10px var(--cyber); font-weight: bold; }
-
-        .btn-access {
-            width: 100%;
-            margin-top: 25px;
-            padding: 20px;
-            background: #0a0a0a;
+        .dashboard {
+            width: 700px;
+            background: rgba(0, 0, 0, 0.95);
             border: 1px solid #222;
-            color: #444;
-            font-family: 'Space Mono', monospace;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            cursor: not-allowed;
-            transition: all 0.4s;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out, border 1s;
+            position: relative;
         }
-        .btn-access.ready {
-            background: linear-gradient(90deg, #00f2ff, #0066ff);
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
-        }
-        .btn-access.ready:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(0, 242, 255, 0.4); }
 
-        /* Final Reveal Overlay */
+        .dashboard.unlocked-style {
+            border-color: var(--heart-red);
+            animation: cardHeartbeat 2.5s ease-in-out infinite;
+            box-shadow: 0 0 60px rgba(255, 0, 51, 0.2);
+        }
+
+        @keyframes neonGlow {
+            0%, 100% { box-shadow: 0 0 5px var(--matrix); }
+            50% { box-shadow: 0 0 25px var(--matrix); }
+        }
+
+        .btn-access.ready { 
+            background: var(--matrix); 
+            color: #000; 
+            cursor: pointer; 
+            border: none;
+            animation: neonGlow 1.5s infinite;
+        }
+
+        /* UI Elements */
+        .header { margin-bottom: 30px; }
+        .top-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .id-label { font-size: 14px; color: var(--gray); }
+        .status-box { border: 1px solid var(--white); border-radius: 15px; padding: 5px 20px; }
+        .status-text { font-weight: bold; font-size: 14px; }
+        h1 { font-size: 42px; font-weight: bold; color: var(--white); margin-top: 5px; }
+        .sub-header { color: var(--matrix); font-size: 14px; font-weight: bold; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+        .module { border: 1px solid #222; padding: 15px; }
+        .module-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+        .inner-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #222; }
+        .cell { padding: 10px; border-right: 1px solid #222; border-bottom: 1px solid #222; }
+        .cell-label { font-size: 10px; color: var(--gray); }
+        .cell-val { font-size: 12px; font-weight: bold; }
+        .green-text { color: var(--matrix); }
+
+        .bottom-section { margin-top: 30px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+        .log-box { font-size: 11px; color: var(--matrix); line-height: 1.6; }
+        #timer { font-size: 32px; font-weight: bold; color: var(--matrix); }
+
         .overlay {
             position: absolute;
             inset: 0;
-            background: var(--bg);
             z-index: 100;
             display: flex;
             flex-direction: column;
@@ -158,225 +118,302 @@
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.8s;
             padding: 40px;
             text-align: center;
+            border-radius: inherit;
+            background-image: linear-gradient(rgba(10, 0, 5, 0.6), rgba(0, 0, 0, 0.6)), url('xxx.jpeg');
+            background-size: cover;
+            background-position: center;
+            transform-style: preserve-3d;
         }
         .overlay.show { opacity: 1; pointer-events: auto; }
-        .overlay h2 { color: var(--gold); font-size: 2rem; margin-bottom: 20px; font-family: 'Syne', sans-serif; }
-        .overlay p { color: #fff; line-height: 1.8; font-size: 0.95rem; }
+        .overlay h2 { color: var(--gold); font-size: 2.2rem; margin-bottom: 20px; transform: translateZ(30px); }
+        .overlay p { color: #fff; line-height: 1.8; transform: translateZ(20px); }
 
         .btn-relock {
-            margin-top: 40px;
-            background: none;
-            border: 1px solid #333;
-            color: #555;
+            margin-top: 40px; 
+            background: rgba(0,0,0,0.8); 
+            border: 1px solid #990022; 
+            color: #ff3366;
+            padding: 12px 24px; 
             cursor: pointer;
-            padding: 8px 20px;
-            font-size: 0.6rem;
-            letter-spacing: 2px;
+            font-family: 'Space Mono';
+            transform: translateZ(40px);
             transition: 0.3s;
         }
-        .btn-relock:hover { color: var(--cyber); border-color: var(--cyber); }
+        .btn-relock:hover {
+            border-color: #ff3366;
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        .bar-bg { width: 100%; height: 6px; background: #111; margin-top: 10px; }
+        #entropyBar { width: 0%; height: 100%; background: var(--matrix); transition: width 0.5s; }
+        .footer { margin-top: 30px; display: flex; gap: 20px; }
+        .btn-access { background: none; border: 1px solid var(--matrix); color: var(--matrix); padding: 10px 30px; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <canvas id="bgCanvas"></canvas>
-    <canvas id="dustCanvas"></canvas>
+    <canvas id="matrixCanvas"></canvas>
     <canvas id="confCanvas"></canvas>
 
     <div id="scene">
-        <div class="card-3d locked" id="card">
-            <div class="lock-screen"></div>
-            <div class="moon" id="moon">🌙</div>
-
-            <div class="system-text">
-                <span>SEC_STATUS: <span id="statusText">ENCRYPTED</span></span>
-                <span id="errorCode" style="color: var(--error);"></span>
+        <div class="dashboard" id="card">
+            <div class="header">
+                <div class="top-row">
+                    <div>
+                        <div class="id-label">[ ARCH_LINUX_CORE ]</div>
+                        <div class="id-label" style="color: var(--matrix)" id="visitorCount">[ LOG_SESSION: #000 ]</div>
+                    </div>
+                    <div class="status-box">
+                        <span style="color: var(--gray); font-size: 10px;">Status</span>
+                        <div class="status-text" id="statusText">ENCRYPTED</div>
+                    </div>
+                </div>
+                <h1 id="headline">DATA_LOCK</h1>
+                <div class="sub-header" id="subtext">AWAITING_SEQUENCE_START</div>
             </div>
 
-            <h2 id="headline">DATA_LOCKED</h2>
-            <div class="badge" id="subtext">AWAITING_KEY_INJECTION</div>
-
-            <div class="info-grid">
-                <div class="info-row"><span class="label">IDENT_TYPE:</span><span class="val">SVU_CYBER_UNIT</span></div>
-                <div class="info-row"><span class="label">LOC_ORIGIN:</span><span class="val">RIYADH_KSA</span></div>
-                
-                <div class="timer-box">
-                    <div style="font-size: 0.6rem; color: #506a85; margin-bottom: 5px; letter-spacing: 2px;">DECRYPTION_ETA (GMT+3)</div>
-                    <div id="timer">00:00:00:00</div>
+            <div class="grid">
+                <div class="module">
+                    <div class="module-title">SYSTEM LOG</div>
+                    <div class="inner-grid">
+                        <div class="cell"><div class="cell-label">NODE_ORIGIN</div><div class="cell-val">SVU_RIYADH</div></div>
+                        <div class="cell"><div class="cell-label">VISITS</div><div class="cell-val green-text" id="visitDisplay">0</div></div>
+                    </div>
+                </div>
+                <div class="module">
+                    <div class="module-title">HARDWARE THREAD</div>
+                    <div class="inner-grid">
+                        <div class="cell"><div class="cell-label">CPU_CORE</div><div class="cell-val">04_SEC</div></div>
+                        <div class="cell"><div class="cell-label">STATUS</div><div class="cell-val green-text">ACTIVE</div></div>
+                    </div>
                 </div>
             </div>
 
-            <button class="btn-access" id="accessBtn" onclick="grantAccess()">Access Denied</button>
+            <div class="bottom-section">
+                <div class="log-box">
+                    <div class="module-title" style="color: white">SYSTEM LOG</div>
+                    <div id="logContent">Initializing secure handshake...<br>Scanning memory blocks...</div>
+                    <div class="entropy-wrap">
+                        <div class="cell-label">DECRYPTION <span id="entropyPerc" style="float:right">0%</span></div>
+                        <div class="bar-bg"><div id="entropyBar"></div></div>
+                    </div>
+                </div>
+                <div class="module" style="text-align: center; padding: 20px;">
+                    <div class="cell-label">TIMER</div>
+                    <div id="timer">00:00</div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div style="flex-grow: 1; border: 1px solid #222; background: #050505;"></div>
+                <button class="btn-access" id="accessBtn" onclick="grantAccess()">BTN ACCESS</button>
+            </div>
 
             <div class="overlay" id="overlay">
-                <div style="font-size: 60px; margin-bottom: 20px;">🔓</div>
+                <div style="font-size: 60px; margin-bottom: 10px; transform: translateZ(50px);">✨</div>
                 <h2>SYSTEM UNLOCKED</h2>
-                <p>To our Senior Cyber Engineer:<br><br>Wishing you an elite birthday and a blessed Ramadan in Riyadh. Your code is clean, and your security is unbreakable! ✨</p>
-                <button class="btn-relock" onclick="closeOverlay()">TERMINATE_SESSION</button>
+                <p>To the Cybersecurity Engineer and the Most Cute Girl:<br>Salma Saleh<br><br>Wishing you an elite birthday and a blessed Ramadan. Your code is clean, and your security is unbreakable! 😌🎉</p>
+                <button class="btn-relock" id="terminateBtn" onclick="closeOverlay()">TERMINATE_SESSION</button>
             </div>
         </div>
     </div>
 
 <script>
-    // --- TARGET CONFIGURATION ---
-    const targetDate = new Date().getTime() + (0.2 * 60 * 1000);
-    //const targetDate = new Date("2026-02-27T23:59:59+03:00").getTime();
+    let visitCount = localStorage.getItem('birthday_visits') || 0;
+    visitCount++;
+    localStorage.setItem('birthday_visits', visitCount);
+    document.getElementById('visitDisplay').innerText = visitCount;
+    document.getElementById('visitorCount').innerText = `[ LOG_SESSION: #${visitCount.toString().padStart(3, '0')} ]`;
+
+    const targetDate = new Date().getTime() + 5000; 
     let isUnlocked = false;
+    let heartMode = false;
 
-    // --- TEXT SCRAMBLE ENGINE ---
-    const chars = "!<>-_\\/[]{}—=+*^?#________";
-    function scramble(element, finalTag) {
-        let iterations = 0;
-        const interval = setInterval(() => {
-            element.innerText = finalTag.split("")
-                .map((char, index) => {
-                    if (index < iterations) return finalTag[index];
-                    return chars[Math.floor(Math.random() * chars.length)];
-                }).join("");
-            if (iterations >= finalTag.length) clearInterval(interval);
-            iterations += 1 / 3;
-        }, 30);
-    }
+    const mCanvas = document.getElementById('matrixCanvas');
+    const mCtx = mCanvas.getContext('2d');
+    let W, H, columns, drops = [];
+    const fontSize = 24;
 
-    // --- SYSTEM MONITOR ---
-    function updateSystem() {
-        const now = new Date().getTime();
-        const diff = targetDate - now;
+    // --- NEW FLOATING HEARTS DATA ---
+    let floatingHearts = [];
 
-        const timerEl = document.getElementById('timer');
-        const btn = document.getElementById('accessBtn');
-        const card = document.getElementById('card');
-        const status = document.getElementById('statusText');
-        const head = document.getElementById('headline');
-
-        if (diff <= 0) {
-            if (!isUnlocked) {
-                isUnlocked = true;
-                status.innerText = "AUTHENTICATED";
-                status.style.color = "var(--gold)";
-                card.classList.remove('locked');
-                card.classList.add('unlocked');
-                scramble(head, "Happy\nBirthday,\nBestie!");
-                scramble(document.getElementById('subtext'), "SENIOR CYBER SECURITY @ SVU");
-                btn.innerText = "Grant Access";
-                btn.classList.add('ready');
-            }
-            timerEl.innerText = "00:00:00:00";
-            return;
-        }
-
-        const d = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
-        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-        const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-        timerEl.innerText = `${d}:${h}:${m}:${s}`;
-
-        if (!isUnlocked && Math.random() > 0.98) {
-            const original = head.innerText;
-            head.innerText = "ACCESS_DENIED_" + Math.random().toString(16).substr(2, 4).toUpperCase();
-            setTimeout(() => { if(!isUnlocked) head.innerText = "DATA_LOCKED"; }, 150);
-        }
-    }
-
-    // --- ACCESS HANDLER ---
-    function grantAccess() {
-        if (!isUnlocked) {
-            const card = document.getElementById('card');
-            card.style.transform = "translateX(8px)";
-            setTimeout(() => card.style.transform = "translateX(-8px)", 50);
-            setTimeout(() => card.style.transform = "translateX(0)", 100);
-            document.getElementById('errorCode').innerText = "SEC_BREACH_ERR";
-            setTimeout(() => document.getElementById('errorCode').innerText = "", 1500);
-            return;
-        }
-        document.getElementById('overlay').classList.add('show');
-        triggerConfetti();
-    }
-
-    // --- PHYSICS ENGINE (Stars/Dust/Slow Confetti) ---
-    const bgC = document.getElementById('bgCanvas'), dustC = document.getElementById('dustCanvas'), confC = document.getElementById('confCanvas');
-    const ctxB = bgC.getContext('2d'), ctxD = dustC.getContext('2d'), ctxC = confC.getContext('2d');
-    let W, H, stars = [], dust = [], confetti = [];
-
-    class Particle {
-        constructor(x, y, color, isConfetti = false) {
-            this.x = x; this.y = y; this.color = color; this.isConfetti = isConfetti;
-            this.size = isConfetti ? Math.random() * 8 + 6 : 1.5;
-            this.vx = (Math.random() - 0.5) * (isConfetti ? 3 : 2);
-            this.vy = isConfetti ? Math.random() * 1.5 + 1 : (Math.random() - 0.5) * 2;
-            this.life = 1;
-            this.gravity = isConfetti ? 0.02 : 0; // Very low gravity for slow float
-            this.rotation = Math.random() * 360;
-            this.rSpeed = (Math.random() - 0.5) * 2;
-        }
-        update() {
-            this.x += this.vx; this.y += this.vy; this.vy += this.gravity;
-            if (this.isConfetti) { this.rotation += this.rSpeed; } else { this.life -= 0.02; }
-        }
-        draw(ctx) {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.globalAlpha = this.life;
-            ctx.fillStyle = this.color;
-            if (this.isConfetti) {
-                ctx.rotate(this.rotation * Math.PI / 180);
-                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-            } else {
-                ctx.beginPath(); ctx.arc(0, 0, this.size, 0, Math.PI*2); ctx.fill();
-            }
-            ctx.restore();
-        }
-    }
-
-    function resize() {
+    function initMatrix() {
         W = window.innerWidth; H = window.innerHeight;
-        bgC.width = dustC.width = confC.width = W;
-        bgC.height = dustC.height = confC.height = H;
-        stars = [];
-        for(let i=0; i<200; i++) {
-            let sz = Math.random() > 0.9 ? 2.5 : 0.8;
-            stars.push({x: Math.random()*W, y: Math.random()*H, sz, spd: sz*0.1});
+        mCanvas.width = W; mCanvas.height = H;
+        document.getElementById('confCanvas').width = W;
+        document.getElementById('confCanvas').height = H;
+        columns = Math.floor(W / fontSize);
+        drops = Array(columns).fill(1);
+    }
+
+    function drawMatrix() {
+        mCtx.fillStyle = "rgba(0, 0, 0, 0.15)"; 
+        mCtx.fillRect(0, 0, W, H);
+        mCtx.font = fontSize + "px monospace";
+        for (let i = 0; i < drops.length; i++) {
+            const text = Math.random() > 0.5 ? "0" : "1";
+            mCtx.fillStyle = Math.random() > 0.9 ? "#00ff41" : "#003b00";
+            mCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > H && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
         }
     }
 
-    function triggerConfetti() {
-        confetti = [];
-        for(let i=0; i<150; i++) {
-            setTimeout(() => {
-                const colors = ['#00f2ff', '#ffd700', '#ffffff', '#0066ff', '#ff00ff'];
-                confetti.push(new Particle(Math.random()*W, -20, colors[Math.floor(Math.random()*colors.length)], true));
-            }, i * 20); // Staggered entry
+    // --- HEART DRAWING UTILITY ---
+    function drawHeartShape(ctx, x, y, size, opacity, isFilled) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        for (let i = 0; i < 2 * Math.PI; i += 0.05) {
+            let hX = 16 * Math.pow(Math.sin(i), 3);
+            let hY = -(13 * Math.cos(i) - 5 * Math.cos(2 * i) - 2 * Math.cos(3 * i) - Math.cos(4 * i));
+            ctx.lineTo(hX * size, hY * size);
+        }
+        
+        if (isFilled) {
+            ctx.fillStyle = `rgba(153, 0, 34, ${opacity})`; // Semi-dark red
+            ctx.fill();
+        } else {
+            ctx.strokeStyle = `rgba(255, 51, 102, ${opacity * 0.5})`; // Fainter edge
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // --- IMPROVED HEART ENGINE ---
+    let mainHeartPulse = 0;
+    
+    function initFloatingHearts() {
+        floatingHearts = [];
+        // Create 60 particles with random properties
+        for (let i = 0; i < 60; i++) {
+            floatingHearts.push({
+                x: Math.random() * W,
+                y: Math.random() * H + H, // Start below screen
+                size: Math.random() * 3 + 1, // varied sizes
+                speed: Math.random() * 1 + 0.5, // varied speed
+                opacity: Math.random() * 0.5 + 0.1, // semi-dark opacities
+                wobble: Math.random() * 100, // horizontal drift
+                filled: Math.random() > 0.3 // mix of filled and outline
+            });
         }
     }
 
-    function animate() {
-        ctxB.clearRect(0,0,W,H); ctxD.clearRect(0,0,W,H); ctxC.clearRect(0,0,W,H);
-        stars.forEach(s => {
-            s.y -= s.spd; if(s.y < 0) s.y = H;
-            ctxB.fillStyle = "#fff"; ctxB.globalAlpha = 0.3 + Math.random()*0.7;
-            ctxB.beginPath(); ctxB.arc(s.x, s.y, s.sz, 0, Math.PI*2); ctxB.fill();
-        });
-        dust.forEach((p, i) => { p.update(); p.draw(ctxD); if(p.life <= 0) dust.splice(i, 1); });
-        confetti.forEach((p, i) => { p.update(); p.draw(ctxC); if(p.y > H + 20) confetti.splice(i, 1); });
-        requestAnimationFrame(animate);
+    function drawHeartBackground() {
+        mCtx.fillStyle = "rgba(10, 0, 0, 0.2)"; // Deep midnight trail
+        mCtx.fillRect(0, 0, W, H);
+        
+        // 1. Draw 60 Floating Hearts (Bokeh effect)
+        for (let i = 0; i < floatingHearts.length; i++) {
+            let p = floatingHearts[i];
+            p.y -= p.speed; // Float up
+            p.x += Math.sin((p.y + p.wobble) * 0.01) * 0.5; // Drift side to side
+
+            // If it goes off top, reset to bottom
+            if (p.y < -50) {
+                p.y = H + 50;
+                p.x = Math.random() * W;
+            }
+
+            drawHeartShape(mCtx, p.x, p.y, p.size, p.opacity, p.filled);
+        }
+
+        // 2. Draw Main Beating Heart (behind card)
+        mainHeartPulse = 15 + Math.sin(Date.now() * 0.005) * 1.5;
+        if(Math.sin(Date.now() * 0.01) > 0.8) mainHeartPulse += 0.5;
+
+        mCtx.save();
+        mCtx.shadowBlur = 40;
+        mCtx.shadowColor = "rgba(255, 0, 51, 0.7)";
+        drawHeartShape(mCtx, W / 2, H / 2, mainHeartPulse, 0.4, true); // Main solid heart
+        ctxC.restore();
     }
 
     window.addEventListener('mousemove', e => {
         const card = document.getElementById('card');
-        let ax = (W/2 - e.pageX)/35; let ay = (H/2 - e.pageY)/35;
+        let ax = (window.innerWidth / 2 - e.pageX) / 60;
+        let ay = (window.innerHeight / 2 - e.pageY) / 60;
         card.style.transform = `rotateY(${-ax}deg) rotateX(${ay}deg)`;
-        for(let i=0; i<1; i++) dust.push(new Particle(e.clientX, e.clientY, i%2?'#00f2ff':'#ffd700'));
     });
 
-    function closeOverlay() { document.getElementById('overlay').classList.remove('show'); }
+    function update() {
+        const now = new Date().getTime();
+        const diff = targetDate - now;
+        const prog = Math.max(0, Math.min(100, (1 - (diff / 5000)) * 100));
+        document.getElementById('entropyBar').style.width = prog + "%";
+        document.getElementById('entropyPerc').innerText = Math.floor(prog) + "%";
 
-    window.addEventListener('resize', resize);
-    resize(); animate();
-    setInterval(updateSystem, 1000);
+        if (diff <= 0) {
+            if (!isUnlocked) {
+                isUnlocked = true;
+                document.getElementById('statusText').innerText = "AUTHENTICATED";
+                document.getElementById('statusText').style.color = "var(--gold)";
+                document.getElementById('headline').innerText = "HAPPY_BIRTHDAY";
+                document.getElementById('subtext').innerText = "SENIOR_CYBER_ENGINEER_DETECTED";
+                const btn = document.getElementById('accessBtn');
+                btn.innerText = "Grant Access";
+                btn.classList.add('ready');
+            }
+            document.getElementById('timer').innerText = "00:00";
+            return;
+        }
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        document.getElementById('timer').innerText = `00:${s}`;
+    }
+
+    const confC = document.getElementById('confCanvas');
+    const ctxC = confC.getContext('2d');
+    let confetti = [];
+
+	function triggerConfetti() {
+		for(let i=0; i<150; i++) {
+			confetti.push({
+				x: Math.random() * W, 
+				y: -20, 
+				sz: Math.random() * 8 + 4,
+				// تقليل السرعة الأفقية (الانتشار)
+				vx: (Math.random() - 0.7) * 4, 
+				// تقليل السرعة العمودية (الجاذبية) لجعلها تسقط ببطء
+				vy: Math.random() * 2 + 1.7, 
+				// جعل الألوان عشوائية تماماً (من 0 إلى 360 درجة لون)
+				c: `hsl(${Math.random() * 360}, 80%, 60%)` 
+			});
+		}
+	}
+
+    function grantAccess() {
+        if(!isUnlocked) return;
+        heartMode = true;
+        initFloatingHearts(); // Start the floating system
+        document.body.classList.add('heart-active');
+        document.getElementById('card').classList.add('unlocked-style');
+        document.getElementById('overlay').classList.add('show');
+        triggerConfetti();
+    }
+
+    function closeOverlay() { 
+        document.getElementById('overlay').classList.remove('show');
+    }
+
+    function animate() {
+        if (!heartMode) drawMatrix(); else drawHeartBackground();
+        ctxC.clearRect(0, 0, W, H);
+        confetti.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy;
+			p.x += p.vx + Math.sin(p.y * 0.02); // إضافة تمايل جانبي بسيط
+            ctxC.fillStyle = p.c;
+            ctxC.fillRect(p.x, p.y, p.sz, p.sz);
+            if(p.y > H) confetti.splice(i, 1);
+        });
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', initMatrix);
+    initMatrix(); animate(); setInterval(update, 1000);
 </script>
 </body>
-
 </html>
