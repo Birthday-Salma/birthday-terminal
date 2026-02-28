@@ -12,8 +12,7 @@
             --white: #ffffff;
             --gray: #888;
             --gold: #ffd700;
-            --heart-red: #ff0033;
-            /* Semi-dark red for floating particles */
+            --heart-red: #5C0012;
             --float-heart: rgba(255, 0, 51, 0.25); 
         }
 
@@ -29,7 +28,7 @@
         }
 
         body.heart-active {
-            background: #0a0000;
+            background: ##360000;
         }
 
         canvas { position: fixed; top: 0; left: 0; }
@@ -44,9 +43,9 @@
             align-items: center;
             justify-content: center;
             perspective: 2000px;
+            padding: 20px; /* إضافة مسافة للهواتف */
         }
 
-        /* --- CARD PULSE --- */
         @keyframes cardHeartbeat {
             0% { transform: scale(1); }
             15% { transform: scale(1.03); }
@@ -56,7 +55,8 @@
         }
 
         .dashboard {
-            width: 700px;
+            width: 100%;
+            max-width: 700px; /* جعل العرض مرن */
             background: rgba(0, 0, 0, 0.95);
             border: 1px solid #222;
             border-radius: 20px;
@@ -86,7 +86,6 @@
             animation: neonGlow 1.5s infinite;
         }
 
-        /* UI Elements */
         .header { margin-bottom: 30px; }
         .top-row { display: flex; justify-content: space-between; align-items: flex-start; }
         .id-label { font-size: 14px; color: var(--gray); }
@@ -122,16 +121,16 @@
             padding: 40px;
             text-align: center;
             border-radius: inherit;
-            /* تم إضافة لون أسود صلب كخلفية أساسية هنا */
             background-color: #000; 
             background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('xxx.jpeg');
             background-size: cover;
             background-position: center;
             transform-style: preserve-3d;
+            overflow-y: auto; /* للسماح بالتمرير إذا كان النص طويلاً في الموبايل */
         }
         .overlay.show { opacity: 1; pointer-events: auto; }
         .overlay h2 { color: var(--gold); font-size: 2.2rem; margin-bottom: 20px; transform: translateZ(30px); }
-        .overlay p { color: #fff; line-height: 1.8; transform: translateZ(20px); }
+        .overlay p { color: #fff; line-height: 1.8; transform: translateZ(20px); font-size: 14px; }
 
         .btn-relock {
             margin-top: 40px; 
@@ -144,15 +143,24 @@
             transform: translateZ(40px);
             transition: 0.3s;
         }
-        .btn-relock:hover {
-            border-color: #ff3366;
-            background: rgba(255, 51, 102, 0.1);
-        }
 
         .bar-bg { width: 100%; height: 6px; background: #111; margin-top: 10px; }
         #entropyBar { width: 0%; height: 100%; background: var(--matrix); transition: width 0.5s; }
         .footer { margin-top: 30px; display: flex; gap: 20px; }
-        .btn-access { background: none; border: 1px solid var(--matrix); color: var(--matrix); padding: 10px 30px; cursor: not-allowed; }
+        .btn-access { background: none; border: 1px solid var(--matrix); color: var(--matrix); padding: 10px 30px; cursor: not-allowed; white-space: nowrap;}
+
+        /* --- MEDIA QUERIES FOR MOBILE --- */
+        @media (max-width: 600px) {
+            .dashboard { padding: 20px; }
+            h1 { font-size: 28px; }
+            .grid, .bottom-section { grid-template-columns: 1fr; }
+            .status-box { padding: 5px 10px; }
+            .overlay h2 { font-size: 1.5rem; }
+            .overlay p { font-size: 12px; }
+            #timer { font-size: 24px; }
+            .footer { flex-direction: column-reverse; }
+            .btn-access { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -215,11 +223,9 @@
             </div>
 
             <div class="overlay" id="overlay">
-                <div style="font-size: 60px; margin-bottom: 10px; transform: translateZ(50px);">✨</div>
-                <br>
-				<br>
-				<h2>SYSTEM UNLOCKED</h2>
-                <p>To the Cybersecurity Engineer and the Cutest Girl:<br>Salma Saleh<br><br>Wishing you an elite birthday and a blessed Ramadan. Your code is clean, and your security is unbreakable! 😌🎉<br>28-02 11:15 PM</p>
+                <div style="font-size: 50px; margin-bottom: 10px; transform: translateZ(50px);">✨</div>
+                <h2>SYSTEM UNLOCKED</h2>
+                <p>To the Cybersecurity Engineer and the Cutest Girl:<br>Salma Saleh<br><br>Wishing you an elite birthday and a blessed Ramadan. Your code is clean, and your security is unbreakable! 😌🎉<br><span style="font-size: 10px; color: var(--gray)">28-02 11:15 PM</span></p>
                 <button class="btn-relock" id="terminateBtn" onclick="closeOverlay()">TERMINATE_SESSION</button>
             </div>
         </div>
@@ -239,9 +245,8 @@
     const mCanvas = document.getElementById('matrixCanvas');
     const mCtx = mCanvas.getContext('2d');
     let W, H, columns, drops = [];
-    const fontSize = 24;
+    const fontSize = 18; // تصغير حجم خط الماتريكس قليلاً للموبايل
 
-    // --- NEW FLOATING HEARTS DATA ---
     let floatingHearts = [];
 
     function initMatrix() {
@@ -291,7 +296,8 @@
     
     function initFloatingHearts() {
         floatingHearts = [];
-        for (let i = 0; i < 60; i++) {
+        let count = W < 600 ? 30 : 60; // تقليل عدد القلوب في الموبايل للأداء
+        for (let i = 0; i < count; i++) {
             floatingHearts.push({
                 x: Math.random() * W,
                 y: Math.random() * H + H, 
@@ -320,17 +326,18 @@
             drawHeartShape(mCtx, p.x, p.y, p.size, p.opacity, p.filled);
         }
 
-        mainHeartPulse = 15 + Math.sin(Date.now() * 0.005) * 1.5;
-        if(Math.sin(Date.now() * 0.01) > 0.8) mainHeartPulse += 0.5;
+        let heartSize = W < 600 ? 8 : 15; // تصغير القلب النابض للموبايل
+        mainHeartPulse = heartSize + Math.sin(Date.now() * 0.005) * 1.5;
 
         mCtx.save();
         mCtx.shadowBlur = 40;
         mCtx.shadowColor = "rgba(255, 0, 51, 0.7)";
         drawHeartShape(mCtx, W / 2, H / 2, mainHeartPulse, 0.4, true); 
-        ctxC.restore();
+        mCtx.restore();
     }
 
     window.addEventListener('mousemove', e => {
+        if(W < 600) return; // تعطيل تأثير الـ 3D القوي في الموبايل لسهولة الاستخدام
         const card = document.getElementById('card');
         let ax = (window.innerWidth / 2 - e.pageX) / 60;
         let ay = (window.innerHeight / 2 - e.pageY) / 60;
@@ -367,7 +374,8 @@
     let confetti = [];
 
     function triggerConfetti() {
-        for(let i=0; i<150; i++) {
+        let count = W < 600 ? 80 : 150; 
+        for(let i=0; i<count; i++) {
             confetti.push({
                 x: Math.random() * W, 
                 y: -20, 
@@ -379,11 +387,9 @@
         }
     }
 
-    // --- التحقق من تحميل الصورة ---
     const imgCheck = new Image();
     imgCheck.src = 'xxx.jpeg';
     imgCheck.onerror = function() {
-        console.log("Image failed to load. Background set to black.");
         document.getElementById('overlay').style.backgroundImage = "none";
         document.getElementById('overlay').style.backgroundColor = "#000";
     };
