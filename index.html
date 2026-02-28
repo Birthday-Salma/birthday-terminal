@@ -122,7 +122,9 @@
             padding: 40px;
             text-align: center;
             border-radius: inherit;
-            background-image: linear-gradient(rgba(10, 0, 5, 0.6), rgba(0, 0, 0, 0.6)), url('xxx.jpeg');
+            /* تم إضافة لون أسود صلب كخلفية أساسية هنا */
+            background-color: #000; 
+            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url('xxx.jpeg');
             background-size: cover;
             background-position: center;
             transform-style: preserve-3d;
@@ -262,7 +264,6 @@
         }
     }
 
-    // --- HEART DRAWING UTILITY ---
     function drawHeartShape(ctx, x, y, size, opacity, isFilled) {
         ctx.save();
         ctx.translate(x, y);
@@ -274,62 +275,56 @@
         }
         
         if (isFilled) {
-            ctx.fillStyle = `rgba(153, 0, 34, ${opacity})`; // Semi-dark red
+            ctx.fillStyle = `rgba(153, 0, 34, ${opacity})`; 
             ctx.fill();
         } else {
-            ctx.strokeStyle = `rgba(255, 51, 102, ${opacity * 0.5})`; // Fainter edge
+            ctx.strokeStyle = `rgba(255, 51, 102, ${opacity * 0.5})`; 
             ctx.lineWidth = 1;
             ctx.stroke();
         }
         ctx.restore();
     }
 
-    // --- IMPROVED HEART ENGINE ---
     let mainHeartPulse = 0;
     
     function initFloatingHearts() {
         floatingHearts = [];
-        // Create 60 particles with random properties
         for (let i = 0; i < 60; i++) {
             floatingHearts.push({
                 x: Math.random() * W,
-                y: Math.random() * H + H, // Start below screen
-                size: Math.random() * 3 + 1, // varied sizes
-                speed: Math.random() * 1 + 0.5, // varied speed
-                opacity: Math.random() * 0.5 + 0.1, // semi-dark opacities
-                wobble: Math.random() * 100, // horizontal drift
-                filled: Math.random() > 0.3 // mix of filled and outline
+                y: Math.random() * H + H, 
+                size: Math.random() * 3 + 1, 
+                speed: Math.random() * 1 + 0.5, 
+                opacity: Math.random() * 0.5 + 0.1, 
+                wobble: Math.random() * 100, 
+                filled: Math.random() > 0.3 
             });
         }
     }
 
     function drawHeartBackground() {
-        mCtx.fillStyle = "rgba(10, 0, 0, 0.2)"; // Deep midnight trail
+        mCtx.fillStyle = "rgba(10, 0, 0, 0.2)"; 
         mCtx.fillRect(0, 0, W, H);
         
-        // 1. Draw 60 Floating Hearts (Bokeh effect)
         for (let i = 0; i < floatingHearts.length; i++) {
             let p = floatingHearts[i];
-            p.y -= p.speed; // Float up
-            p.x += Math.sin((p.y + p.wobble) * 0.01) * 0.5; // Drift side to side
+            p.y -= p.speed; 
+            p.x += Math.sin((p.y + p.wobble) * 0.01) * 0.5; 
 
-            // If it goes off top, reset to bottom
             if (p.y < -50) {
                 p.y = H + 50;
                 p.x = Math.random() * W;
             }
-
             drawHeartShape(mCtx, p.x, p.y, p.size, p.opacity, p.filled);
         }
 
-        // 2. Draw Main Beating Heart (behind card)
         mainHeartPulse = 15 + Math.sin(Date.now() * 0.005) * 1.5;
         if(Math.sin(Date.now() * 0.01) > 0.8) mainHeartPulse += 0.5;
 
         mCtx.save();
         mCtx.shadowBlur = 40;
         mCtx.shadowColor = "rgba(255, 0, 51, 0.7)";
-        drawHeartShape(mCtx, W / 2, H / 2, mainHeartPulse, 0.4, true); // Main solid heart
+        drawHeartShape(mCtx, W / 2, H / 2, mainHeartPulse, 0.4, true); 
         ctxC.restore();
     }
 
@@ -369,26 +364,32 @@
     const ctxC = confC.getContext('2d');
     let confetti = [];
 
-	function triggerConfetti() {
-		for(let i=0; i<150; i++) {
-			confetti.push({
-				x: Math.random() * W, 
-				y: -20, 
-				sz: Math.random() * 8 + 4,
-				// تقليل السرعة الأفقية (الانتشار)
-				vx: (Math.random() - 0.7) * 4, 
-				// تقليل السرعة العمودية (الجاذبية) لجعلها تسقط ببطء
-				vy: Math.random() * 2 + 1.7, 
-				// جعل الألوان عشوائية تماماً (من 0 إلى 360 درجة لون)
-				c: `hsl(${Math.random() * 360}, 80%, 60%)` 
-			});
-		}
-	}
+    function triggerConfetti() {
+        for(let i=0; i<150; i++) {
+            confetti.push({
+                x: Math.random() * W, 
+                y: -20, 
+                sz: Math.random() * 8 + 4,
+                vx: (Math.random() - 0.7) * 4, 
+                vy: Math.random() * 2 + 1.7, 
+                c: `hsl(${Math.random() * 360}, 80%, 60%)` 
+            });
+        }
+    }
+
+    // --- التحقق من تحميل الصورة ---
+    const imgCheck = new Image();
+    imgCheck.src = 'xxx.jpeg';
+    imgCheck.onerror = function() {
+        console.log("Image failed to load. Background set to black.");
+        document.getElementById('overlay').style.backgroundImage = "none";
+        document.getElementById('overlay').style.backgroundColor = "#000";
+    };
 
     function grantAccess() {
         if(!isUnlocked) return;
         heartMode = true;
-        initFloatingHearts(); // Start the floating system
+        initFloatingHearts(); 
         document.body.classList.add('heart-active');
         document.getElementById('card').classList.add('unlocked-style');
         document.getElementById('overlay').classList.add('show');
@@ -404,7 +405,7 @@
         ctxC.clearRect(0, 0, W, H);
         confetti.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy;
-			p.x += p.vx + Math.sin(p.y * 0.02); // إضافة تمايل جانبي بسيط
+            p.x += Math.sin(p.y * 0.02); 
             ctxC.fillStyle = p.c;
             ctxC.fillRect(p.x, p.y, p.sz, p.sz);
             if(p.y > H) confetti.splice(i, 1);
