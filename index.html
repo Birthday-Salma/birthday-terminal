@@ -20,15 +20,22 @@
 
         body {
             background: var(--bg);
-            overflow: hidden;
+            /* تغيير الهيدن للسماح بالتمرير في الموبايل */
+            overflow-x: hidden;
+            overflow-y: auto; 
             font-family: 'Space Mono', monospace;
-            height: 100vh;
+            min-height: 100vh;
             color: var(--white);
             transition: background 2s ease;
         }
 
+        /* منع التمرير في الـ PC للحفاظ على الشكل الأصلي */
+        @media (min-width: 1000px) {
+            body { overflow: hidden; }
+        }
+
         body.heart-active {
-            background: ##360000;
+            background: #4a0010;
         }
 
         canvas { position: fixed; top: 0; left: 0; }
@@ -38,12 +45,12 @@
         #scene {
             position: relative;
             z-index: 10;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             perspective: 2000px;
-            padding: 20px; /* إضافة مسافة للهواتف */
+            padding: 20px; 
         }
 
         @keyframes cardHeartbeat {
@@ -56,7 +63,7 @@
 
         .dashboard {
             width: 100%;
-            max-width: 700px; /* جعل العرض مرن */
+            max-width: 700px;
             background: rgba(0, 0, 0, 0.95);
             border: 1px solid #222;
             border-radius: 20px;
@@ -65,6 +72,7 @@
             transform-style: preserve-3d;
             transition: transform 0.1s ease-out, border 1s;
             position: relative;
+            margin: auto; /* لضمان التوسط عند التمرير */
         }
 
         .dashboard.unlocked-style {
@@ -122,11 +130,11 @@
             text-align: center;
             border-radius: inherit;
             background-color: #000; 
-            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('xxx.jpeg');
+            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('xxx.jpeg');
             background-size: cover;
             background-position: center;
             transform-style: preserve-3d;
-            overflow-y: auto; /* للسماح بالتمرير إذا كان النص طويلاً في الموبايل */
+            overflow-y: auto; 
         }
         .overlay.show { opacity: 1; pointer-events: auto; }
         .overlay h2 { color: var(--gold); font-size: 2.2rem; margin-bottom: 20px; transform: translateZ(30px); }
@@ -149,17 +157,20 @@
         .footer { margin-top: 30px; display: flex; gap: 20px; }
         .btn-access { background: none; border: 1px solid var(--matrix); color: var(--matrix); padding: 10px 30px; cursor: not-allowed; white-space: nowrap;}
 
-        /* --- MEDIA QUERIES FOR MOBILE --- */
+        /* --- التحسينات الخاصة بالموبايل فقط --- */
         @media (max-width: 600px) {
-            .dashboard { padding: 20px; }
-            h1 { font-size: 28px; }
-            .grid, .bottom-section { grid-template-columns: 1fr; }
-            .status-box { padding: 5px 10px; }
-            .overlay h2 { font-size: 1.5rem; }
-            .overlay p { font-size: 12px; }
-            #timer { font-size: 24px; }
-            .footer { flex-direction: column-reverse; }
-            .btn-access { width: 100%; }
+            .dashboard { padding: 20px; border-radius: 15px; }
+            h1 { font-size: 24px; }
+            .grid, .bottom-section { grid-template-columns: 1fr; gap: 10px; }
+            .header { margin-bottom: 15px; }
+            .status-box { padding: 2px 10px; }
+            .status-text { font-size: 11px; }
+            .overlay h2 { font-size: 1.4rem; }
+            .overlay p { font-size: 11px; line-height: 1.5; }
+            #timer { font-size: 22px; }
+            .footer { flex-direction: column-reverse; gap: 10px; }
+            .btn-access { width: 100%; padding: 12px; }
+            .module { padding: 10px; }
         }
     </style>
 </head>
@@ -223,7 +234,8 @@
             </div>
 
             <div class="overlay" id="overlay">
-                <div style="font-size: 50px; margin-bottom: 10px; transform: translateZ(50px);">✨</div>
+                <div style="font-size: 40px; margin-bottom: 10px; transform: translateZ(50px);">✨</div>
+				<br>
                 <h2>SYSTEM UNLOCKED</h2>
                 <p>To the Cybersecurity Engineer and the Cutest Girl:<br>Salma Saleh<br><br>Wishing you an elite birthday and a blessed Ramadan. Your code is clean, and your security is unbreakable! 😌🎉<br><span style="font-size: 10px; color: var(--gray)">28-02 11:15 PM</span></p>
                 <button class="btn-relock" id="terminateBtn" onclick="closeOverlay()">TERMINATE_SESSION</button>
@@ -245,7 +257,7 @@
     const mCanvas = document.getElementById('matrixCanvas');
     const mCtx = mCanvas.getContext('2d');
     let W, H, columns, drops = [];
-    const fontSize = 18; // تصغير حجم خط الماتريكس قليلاً للموبايل
+    const fontSize = 18;
 
     let floatingHearts = [];
 
@@ -296,13 +308,13 @@
     
     function initFloatingHearts() {
         floatingHearts = [];
-        let count = W < 600 ? 30 : 60; // تقليل عدد القلوب في الموبايل للأداء
+        let count = W < 600 ? 30 : 60; 
         for (let i = 0; i < count; i++) {
             floatingHearts.push({
                 x: Math.random() * W,
                 y: Math.random() * H + H, 
                 size: Math.random() * 3 + 1, 
-                speed: Math.random() * 1 + 0.5, 
+                speed: Math.random() * 2 + 0.7, 
                 opacity: Math.random() * 0.5 + 0.1, 
                 wobble: Math.random() * 100, 
                 filled: Math.random() > 0.3 
@@ -326,7 +338,7 @@
             drawHeartShape(mCtx, p.x, p.y, p.size, p.opacity, p.filled);
         }
 
-        let heartSize = W < 600 ? 8 : 15; // تصغير القلب النابض للموبايل
+        let heartSize = W < 600 ? 8 : 15; 
         mainHeartPulse = heartSize + Math.sin(Date.now() * 0.005) * 1.5;
 
         mCtx.save();
@@ -337,7 +349,7 @@
     }
 
     window.addEventListener('mousemove', e => {
-        if(W < 600) return; // تعطيل تأثير الـ 3D القوي في الموبايل لسهولة الاستخدام
+        if(window.innerWidth < 600) return; 
         const card = document.getElementById('card');
         let ax = (window.innerWidth / 2 - e.pageX) / 60;
         let ay = (window.innerHeight / 2 - e.pageY) / 60;
@@ -379,9 +391,9 @@
             confetti.push({
                 x: Math.random() * W, 
                 y: -20, 
-                sz: Math.random() * 8 + 4,
+                sz: Math.random() * 7 + 4,
                 vx: (Math.random() - 0.7) * 4, 
-                vy: Math.random() * 2 + 1.7, 
+                vy: Math.random() * 4 + 1.7, 
                 c: `hsl(${Math.random() * 360}, 80%, 60%)` 
             });
         }
